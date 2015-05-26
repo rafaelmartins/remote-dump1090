@@ -42,8 +42,8 @@ socket_connect(const char *host, int port)
     do {
         fd = socket(AF_INET, SOCK_STREAM, 0);
         if (fd < 0) {
-            fprintf(stderr, "error: Failed to create socket, retrying: %s\n",
-                strerror(errno));
+            fprintf(stderr, "error: Failed to create socket for %s:%d, "
+                "retrying: %s\n", host, port, strerror(errno));
             sleep(RETRY_SLEEP);
         }
     }
@@ -54,21 +54,21 @@ socket_connect(const char *host, int port)
     timeout.tv_usec = 0;
     int rv = setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));
     if (rv < 0) {
-        fprintf(stderr, "error: Failed to set socket read timeout: %s\n",
-            strerror(errno));
+        fprintf(stderr, "error: Failed to set socket read timeout for %s:%d: "
+            "%s\n", host, port, strerror(errno));
         exit(1);
     }
     rv = setsockopt(fd, SOL_SOCKET, SO_SNDTIMEO, &timeout, sizeof(timeout));
     if (rv < 0) {
-        fprintf(stderr, "error: Failed to set socket write timeout: %s\n",
-            strerror(errno));
+        fprintf(stderr, "error: Failed to set socket write timeout for %s:%d: "
+            "%s\n", host, port, strerror(errno));
         exit(1);
     }
 
     struct hostent *h = gethostbyname2(host, AF_INET);
     if (h == NULL) {
-        fprintf(stderr, "error: Failed to parse hostname: %s\n",
-            hstrerror(h_errno));
+        fprintf(stderr, "error: Failed to parse hostname for %s: %s\n",
+            host, hstrerror(h_errno));
         exit(1);
     }
 
