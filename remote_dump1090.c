@@ -102,8 +102,8 @@ socket_connect(const char *host, int port)
 static void
 main_loop(const char *src_host, int src_port, const char *dst_host, int dst_port)
 {
-    int src = socket_connect(src_host, src_port);
     int dst = socket_connect(dst_host, dst_port);
+    int src = socket_connect(src_host, src_port);
     char buf[BUFFER_SIZE];
 
     while (1) {
