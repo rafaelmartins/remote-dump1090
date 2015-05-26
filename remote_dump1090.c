@@ -42,7 +42,7 @@ socket_connect(const char *host, int port)
     do {
         fd = socket(AF_INET, SOCK_STREAM, 0);
         if (fd < 0) {
-            fprintf(stderr, "error: Failed to create socket for %s:%d, "
+            fprintf(stderr, "warning: Failed to create socket for %s:%d, "
                 "retrying: %s\n", host, port, strerror(errno));
             sleep(RETRY_SLEEP);
         }
@@ -89,7 +89,7 @@ socket_connect(const char *host, int port)
     do {
         rv = connect(fd, (const struct sockaddr*) &addr, sizeof(addr));
         if (rv < 0) {
-            fprintf(stderr, "error: Failed to connect to %s:%d, retrying: "
+            fprintf(stderr, "warning: Failed to connect to %s:%d, retrying: "
                 "%s\n", host, port, strerror(errno));
             sleep(RETRY_SLEEP);
         }
