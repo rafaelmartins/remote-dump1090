@@ -17,6 +17,8 @@
 #include <string.h>
 #include <unistd.h>
 #include <signal.h>
+#include <stdarg.h>
+#include <syslog.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
@@ -34,6 +36,31 @@
 #define RETRY_SLEEP 1
 #endif
 
+static int send_to_syslog = 0;
+
+
+static void
+xlog(int priority, const char *format, ...)
+{
+    va_list ap;
+    va_start(ap, format);
+    if (send_to_syslog) {
+        vsyslog(priority, format, ap);
+    }
+    else {
+        const char *level;
+        if (priority == LOG_WARNING)
+            level = "warning";
+        else if (priority == LOG_ERR)
+            level = "error";
+        else
+            level = "unknown";
+        fprintf(stderr, "%s: ", level);
+        vfprintf(stderr, format, ap);
+    }
+    va_end(ap);
+}
+
 
 static int
 socket_connect(const char *host, int port)
@@ -42,8 +69,8 @@ socket_connect(const char *host, int port)
     do {
         fd = socket(AF_INET, SOCK_STREAM, 0);
         if (fd < 0) {
-            fprintf(stderr, "warning: Failed to create socket for %s:%d, "
-                "retrying: %s\n", host, port, strerror(errno));
+            xlog(LOG_WARNING, "Failed to create socket for %s:%d, retrying: %s\n",
+                host, port, strerror(errno));
             sleep(RETRY_SLEEP);
         }
     }
@@ -54,31 +81,31 @@ socket_connect(const char *host, int port)
     timeout.tv_usec = 0;
     int rv = setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));
     if (rv < 0) {
-        fprintf(stderr, "error: Failed to set socket read timeout for %s:%d: "
-            "%s\n", host, port, strerror(errno));
+        xlog(LOG_ERR, "Failed to set socket read timeout for %s:%d: %s\n",
+            host, port, strerror(errno));
         exit(1);
     }
     rv = setsockopt(fd, SOL_SOCKET, SO_SNDTIMEO, &timeout, sizeof(timeout));
     if (rv < 0) {
-        fprintf(stderr, "error: Failed to set socket write timeout for %s:%d: "
-            "%s\n", host, port, strerror(errno));
+        xlog(LOG_ERR, "Failed to set socket write timeout for %s:%d: %s\n",
+            host, port, strerror(errno));
         exit(1);
     }
 
     struct hostent *h = gethostbyname2(host, AF_INET);
     if (h == NULL) {
-        fprintf(stderr, "error: Failed to parse hostname for %s: %s\n",
-            host, hstrerror(h_errno));
+        xlog(LOG_ERR, "Failed to parse hostname for %s: %s\n", host,
+            hstrerror(h_errno));
         exit(1);
     }
 
     struct in_addr **addr_list = (struct in_addr**) h->h_addr_list;
     if (addr_list == NULL || addr_list[0] == NULL) {
-        fprintf(stderr, "error: Can't find any IPv4 address for %s\n", host);
+        xlog(LOG_ERR, "Can't find any IPv4 address for %s\n", host);
         exit(1);
     }
     if (addr_list[1] != NULL)
-        fprintf(stderr, "warning: Hostname with more than one IPv4 address, "
+        xlog(LOG_WARNING, "Hostname with more than one IPv4 address, "
             "using the first one detected: %s\n", inet_ntoa(*addr_list[0]));
 
     struct sockaddr_in addr;
@@ -89,8 +116,8 @@ socket_connect(const char *host, int port)
     do {
         rv = connect(fd, (const struct sockaddr*) &addr, sizeof(addr));
         if (rv < 0) {
-            fprintf(stderr, "warning: Failed to connect to %s:%d, retrying: "
-                "%s\n", host, port, strerror(errno));
+            xlog(LOG_WARNING, "Failed to connect to %s:%d, retrying: %s\n",
+                host, port, strerror(errno));
             sleep(RETRY_SLEEP);
         }
     }
@@ -155,6 +182,7 @@ print_help(void)
         "optional arguments:\n"
         "    -h            show this help message and exit\n"
         "    -v            show version and exit\n"
+        "    -l            send output messages to syslog\n"
         "    -s SRC_PORT   source instance port. defaults to 30002\n"
         "    -d DST_PORT   destination instance port. defaults to 30001\n");
 }
@@ -186,6 +214,9 @@ main(int argc, char **argv)
                 case 'v':
                     printf("%s\n", PACKAGE_STRING);
                     goto end;
+                case 'l':
+                    send_to_syslog = 1;
+                    break;
                 case 's':
                     if (argv[i][2] != '\0')
                         src_port = strtoul(argv[i] + 2, NULL, 10);
@@ -200,8 +231,7 @@ main(int argc, char **argv)
                     break;
                 default:
                     print_usage();
-                    fprintf(stderr, "error: invalid argument: -%c\n",
-                        argv[i][1]);
+                    xlog(LOG_ERR, "invalid argument: -%c\n", argv[i][1]);
                     rv = 2;
                     goto end;
             }
@@ -214,12 +244,12 @@ main(int argc, char **argv)
 
     if (src_host == NULL) {
         print_usage();
-        fprintf(stderr, "error: SRC_HOST is required\n");
+        xlog(LOG_ERR, "SRC_HOST is required\n");
         rv = 2;
     }
     else if (dst_host == NULL) {
         print_usage();
-        fprintf(stderr, "error: DST_HOST is required\n");
+        xlog(LOG_ERR, "DST_HOST is required\n");
         rv = 2;
     }
     else
