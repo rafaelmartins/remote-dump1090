@@ -158,8 +158,8 @@ print_usage(void)
 {
     printf(
         "usage:\n"
-        "    remote-dump1090 [-h] [-v] -s SRC_PORT -d DST_PORT SRC_HOST "
-        "DST_HOST\n");
+        "    remote-dump1090 [-h] [-v] [-l] [-s SRC_PORT] [-d DST_PORT] "
+        "SRC_HOST DST_HOST\n");
 }
 
 
@@ -172,8 +172,8 @@ print_help(void)
         "another instance\n"
         "\n"
         "usage:\n"
-        "    remote-dump1090 [-h] [-v] -s SRC_PORT -d DST_PORT SRC_HOST "
-        "DST_HOST\n"
+        "    remote-dump1090 [-h] [-v] [-l] [-s SRC_PORT] [-d DST_PORT] "
+        "SRC_HOST DST_HOST\n"
         "\n"
         "positional arguments:\n"
         "    SRC_HOST      source instance host name\n"
