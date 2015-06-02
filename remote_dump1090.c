@@ -65,9 +65,30 @@ xlog(int priority, const char *format, ...)
 static int
 socket_connect(const char *host, int port)
 {
+    struct hostent *h = gethostbyname(host);
+    if (h == NULL) {
+        xlog(LOG_ERR, "Failed to parse hostname for %s: %s\n", host,
+            hstrerror(h_errno));
+        exit(1);
+    }
+
+    struct in_addr **addr_list = (struct in_addr**) h->h_addr_list;
+    if (addr_list == NULL || addr_list[0] == NULL) {
+        xlog(LOG_ERR, "Can't find any address for %s\n", host);
+        exit(1);
+    }
+    if (addr_list[1] != NULL)
+        xlog(LOG_WARNING, "Hostname with more than one address, using the "
+            "first one detected: %s\n", inet_ntoa(*addr_list[0]));
+
+    struct sockaddr_in addr;
+    addr.sin_family = h->h_addrtype;
+    addr.sin_port = htons(port);
+    addr.sin_addr = *addr_list[0];
+
     int fd;
     do {
-        fd = socket(AF_INET, SOCK_STREAM, 0);
+        fd = socket(h->h_addrtype, SOCK_STREAM, 0);
         if (fd < 0) {
             xlog(LOG_WARNING, "Failed to create socket for %s:%d, retrying: %s\n",
                 host, port, strerror(errno));
@@ -91,28 +112,6 @@ socket_connect(const char *host, int port)
             host, port, strerror(errno));
         exit(1);
     }
-
-    struct hostent *h = gethostbyname2(host, AF_INET);
-    if (h == NULL) {
-        xlog(LOG_ERR, "Failed to parse hostname for %s: %s\n", host,
-            hstrerror(h_errno));
-        exit(1);
-    }
-
-    struct in_addr **addr_list = (struct in_addr**) h->h_addr_list;
-    if (addr_list == NULL || addr_list[0] == NULL) {
-        xlog(LOG_ERR, "Can't find any IPv4 address for %s\n", host);
-        exit(1);
-    }
-    if (addr_list[1] != NULL)
-        xlog(LOG_WARNING, "Hostname with more than one IPv4 address, "
-            "using the first one detected: %s\n", inet_ntoa(*addr_list[0]));
-
-    struct sockaddr_in addr;
-    addr.sin_family = AF_INET;
-    addr.sin_port = htons(port);
-    addr.sin_addr = *addr_list[0];
-
     do {
         rv = connect(fd, (const struct sockaddr*) &addr, sizeof(addr));
         if (rv < 0) {
