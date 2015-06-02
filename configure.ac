@@ -3,7 +3,7 @@ AC_PREREQ([2.69])
 AC_INIT([remote-dump1090], [0], [https://github.com/rafaelmartins/remote-dump1090])
 AC_CONFIG_AUX_DIR([build-aux])
 
-AM_INIT_AUTOMAKE([1.13 foreign dist-bzip2 dist-xz subdir-objects serial-tests])
+AM_INIT_AUTOMAKE([1.13 foreign dist-bzip2 dist-xz subdir-objects])
 AC_CONFIG_HEADERS([config.h])
 AM_SILENT_RULES([yes])
 AM_MAINTAINER_MODE([enable])
