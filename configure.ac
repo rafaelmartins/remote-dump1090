@@ -11,10 +11,10 @@ AM_MAINTAINER_MODE([enable])
 AC_PROG_CC
 
 AC_CHECK_HEADERS([unistd.h signal.h stdarg.h syslog.h sys/types.h sys/socket.h arpa/inet.h netdb.h],
-                 [], [unable to find some required header])
+                 [], AC_MSG_ERROR([unable to find some required header]))
 
 AC_CHECK_FUNCS([gethostbyname], [],
-               [unable to find gethosbyname function in your libc])
+               AC_MSG_ERROR([unable to find gethosbyname function in your libc]))
 
 AC_CONFIG_FILES([Makefile])
 AC_OUTPUT
